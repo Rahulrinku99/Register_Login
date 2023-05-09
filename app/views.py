@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from app.forms import *
 from django.core.mail import send_mail
 
-from django.http import HttpResponsePermanentRedirect
+from django.http import HttpResponseRedirect
 from django.contrib.auth import authenticate,login,logout
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
@@ -53,7 +53,7 @@ def signup(request):
         if AUO and AUO.is_active:
             login(request,AUO)
             request.session['username']=username
-            return HttpResponsePermanentRedirect(reverse('home'))
+            return HttpResponseRedirect(reverse('home'))
         else:
             return HttpResponse('Invalid username or password')
     return render(request,'signup.html')    
@@ -62,4 +62,46 @@ def signup(request):
 @login_required
 def signout(request):
     logout(request)
-    return HttpResponsePermanentRedirect(reverse('home'))
+    return HttpResponseRedirect(reverse('home'))
+
+@login_required
+def display_profile(request):
+    username=request.session.get('username')
+    UO=User.objects.get(username=username)
+    PO=Profile.objects.get(username=UO)
+    d={'UO':UO,'PO':PO}
+    return render(request,'display_profile.html',d)
+
+@login_required
+def change_password(request):
+    if request.method=="POST":
+        pw=request.POST['pw']
+        username=request.session.get('username')
+        UO=User.objects.get(username=username)
+        UO.set_password(pw)
+        UO.save()
+
+        send_mail('Registration',
+                      'successfully Registration is Done',
+                      '7829794470rahul@gamil.com',
+                      [UO.email],
+                      fail_silently=False)
+        
+        return HttpResponse('password changed successfully')
+    return render(request,'change_password.html')
+
+def forgot_password(request):
+    if request.method=="POST":
+        un=request.POST['un']
+        pw=request.POST['pw']
+        UO=User.objects.filter(username=un)
+        if UO :
+            LUO=UO[0]
+            LUO.set_password(pw)
+            LUO.save()
+            return HttpResponse('password reset successfully')
+        else:
+            return HttpResponse('user is not present in DB')
+        
+        
+    return render(request,'forgot_password.html')
